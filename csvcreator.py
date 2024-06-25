@@ -31,8 +31,11 @@ data = data.merge(status, on='statusId', how='left')
 data = data.merge(driver_standings[['raceId', 'driverId', 'driverPoints', 'driverPosition', 'driverWins']], on=['raceId', 'driverId'], how='left')
 data = data.merge(constructor_standings[['raceId', 'constructorId', 'constructorPoints', 'constructorPosition', 'constructorWins']], on=['raceId', 'constructorId'], how='left')
 
-# Controlla le colonne del DataFrame finale
-print(data.columns)
+# Filtra per gli anni dal 2013 in poi
+data = data[data['year'] >= 2013]
+
+# Ordina per anno, gara e posizione finale
+data = data.sort_values(by=['year', 'raceId', 'positionOrder'])
 
 # Seleziona le colonne rilevanti
 final_data = data[[
@@ -44,4 +47,4 @@ final_data = data[[
 ]]
 
 # Salva il CSV finale
-final_data.to_csv('final_data.csv', index=False)
+final_data.to_csv('final_data_sorted.csv', index=False)
