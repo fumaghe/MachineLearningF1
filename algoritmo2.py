@@ -1,6 +1,7 @@
 import pandas as pd
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.metrics import mean_squared_error
+from sklearn.model_selection import GridSearchCV, train_test_split
 import numpy as np
 
 # Carica i dati
@@ -54,9 +55,30 @@ def train_and_predict(train_data, test_data, target_col):
     X_train, y_train = create_features_and_labels(train_data, target_col)
     X_test, _ = create_features_and_labels(test_data, target_col)
     
+    # Suddividi i dati di addestramento per la cross-validation
+    X_train_split, X_val_split, y_train_split, y_val_split = train_test_split(X_train, y_train, test_size=0.2, random_state=42)
+    
+    # Imposta i parametri per la GridSearchCV
+    param_grid = {
+        'n_estimators': [100, 200],
+        'max_features': ['auto', 'sqrt', 'log2'],
+        'max_depth': [10, 20, None],
+        'min_samples_split': [2, 5],
+        'min_samples_leaf': [1, 2]
+    }
+    
+    # Inizializza e addestra il modello con GridSearchCV
     model = RandomForestRegressor()
-    model.fit(X_train, y_train)
-    y_pred = model.predict(X_test)
+    grid_search = GridSearchCV(estimator=model, param_grid=param_grid, cv=3, n_jobs=-1, verbose=2)
+    grid_search.fit(X_train_split, y_train_split)
+    
+    # Prevedi sui dati di test
+    y_pred = grid_search.predict(X_test)
+    
+    # Valuta le prestazioni del modello
+    val_pred = grid_search.predict(X_val_split)
+    val_mse = mean_squared_error(y_val_split, val_pred)
+    print(f'Validation Mean Squared Error for {target_col}: {val_mse}')
     
     return y_pred
 
