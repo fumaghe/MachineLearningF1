@@ -1,8 +1,8 @@
 import pandas as pd
 from sklearn.ensemble import RandomForestRegressor
-from sklearn.metrics import mean_squared_error
-from sklearn.model_selection import GridSearchCV, train_test_split
+from sklearn.model_selection import train_test_split
 import numpy as np
+import os
 
 # Carica i dati
 data = pd.read_csv('final_data_sorted.csv')
@@ -31,22 +31,22 @@ def prepare_data_for_year(data, year, driver_ids_2024=None):
     if year == 2024 and driver_ids_2024 is not None:
         test_data = pd.DataFrame({'driverId': driver_ids_2024})
         # Aggiungi colonne necessarie con valori predefiniti (o mediati dai dati passati)
-        for col in ['grid', 'constructorPoints', 'driverPoints', 'laps', 'constructorPosition', 'constructorWins', 'driverPosition', 'driverWins', 'resultPoints']:
+        for col in ['grid', 'previous_position', 'previous_points', 'laps']:
             test_data[col] = np.nan
         # Usa valori medi per le colonne mancanti
         test_data = test_data.fillna(train_data.mean())
     else:
         # Filtra i dati per l'anno corrente
-        test_data = data[data['year'] == year]
-        active_drivers = test_data['driverId'].unique()
-        train_data = train_data[train_data['driverId'].isin(active_drivers)]
+        test_data = data[(data['year'] == year) & (data['driverId'].isin(driver_ids_2024))]
     
     return train_data, test_data
 
 # Funzione per creare le feature e le etichette
 def create_features_and_labels(data, target_col):
-    # Seleziona le feature rilevanti
-    features = data[['grid', 'constructorPoints', 'driverPoints', 'laps']]
+    features = data[['grid']]
+    features['previous_position'] = data.groupby('driverId')['positionOrder'].shift(1)
+    features['previous_points'] = data.groupby('driverId')['resultPoints'].shift(1)
+    features.fillna(0, inplace=True)  # Riempie i valori NaN con 0
     labels = data[target_col]
     return features, labels
 
@@ -55,39 +55,39 @@ def train_and_predict(train_data, test_data, target_col):
     X_train, y_train = create_features_and_labels(train_data, target_col)
     X_test, _ = create_features_and_labels(test_data, target_col)
     
-    # Suddividi i dati di addestramento per la cross-validation
-    X_train_split, X_val_split, y_train_split, y_val_split = train_test_split(X_train, y_train, test_size=0.2, random_state=42)
-    
-    # Imposta i parametri per la GridSearchCV
-    param_grid = {
-        'n_estimators': [100, 200],
-        'max_features': ['auto', 'sqrt', 'log2'],
-        'max_depth': [10, 20, None],
-        'min_samples_split': [2, 5],
-        'min_samples_leaf': [1, 2]
-    }
-    
-    # Inizializza e addestra il modello con GridSearchCV
-    model = RandomForestRegressor()
-    grid_search = GridSearchCV(estimator=model, param_grid=param_grid, cv=3, n_jobs=-1, verbose=2)
-    grid_search.fit(X_train_split, y_train_split)
+    # Addestra il modello di RandomForest
+    model = RandomForestRegressor(n_estimators=100, max_features='sqrt', max_depth=20, min_samples_split=2, min_samples_leaf=1)
+    model.fit(X_train, y_train)
     
     # Prevedi sui dati di test
-    y_pred = grid_search.predict(X_test)
-    
-    # Valuta le prestazioni del modello
-    val_pred = grid_search.predict(X_val_split)
-    val_mse = mean_squared_error(y_val_split, val_pred)
-    print(f'Validation Mean Squared Error for {target_col}: {val_mse}')
+    y_pred = model.predict(X_test)
     
     return y_pred
 
-# Colonne da prevedere
-target_columns = [
-    'constructorPoints', 'constructorPosition', 'constructorWins', 
-    'driverPoints', 'driverPosition', 'driverWins', 
-    'grid', 'positionOrder', 'resultPoints', 'laps'
-]
+# Calcolo dei punti in base alla posizione predetta
+def calculate_points(position):
+    if position == 1:
+        return 25
+    elif position == 2:
+        return 18
+    elif position == 3:
+        return 15
+    elif position == 4:
+        return 12
+    elif position == 5:
+        return 10
+    elif position == 6:
+        return 8
+    elif position == 7:
+        return 6
+    elif position == 8:
+        return 4
+    elif position == 9:
+        return 2
+    elif position == 10:
+        return 1
+    else:
+        return 0
 
 # Predizione per ogni anno dal 2018 al 2024
 predictions = []
@@ -102,28 +102,36 @@ for year in years:
         print(f'Anno {year}: dati insufficienti per addestramento o test.')
         continue
     
-    # Prevedi le colonne rilevanti
-    for col in target_columns:
-        test_data.loc[:, f'predicted_{col}'] = train_and_predict(train_data, test_data, col)
+    # Prevedi le posizioni
+    test_data['predicted_positionOrder'] = train_and_predict(train_data, test_data, 'positionOrder')
+    
+    # Calcola i punti in base alle posizioni predette
+    test_data['predicted_resultPoints'] = test_data['predicted_positionOrder'].apply(calculate_points)
+    
+    # Calcola i punti per i costruttori
+    constructor_points = test_data.groupby('constructorId')['predicted_resultPoints'].sum().reset_index()
+    constructor_points.columns = ['constructorId', 'predicted_constructorPoints']
+    test_data = test_data.merge(constructor_points, on='constructorId', how='left')
     
     # Aggiungi l'anno per coerenza
-    test_data.loc[:, 'year'] = year
+    test_data['year'] = year
     
     # Aggiungi le predizioni alla lista
     predictions.append(test_data)
-    
-    if year != 2024:
-        # Calcola l'errore per la posizione
-        y_test = test_data['positionOrder']
-        y_pred = test_data['predicted_positionOrder']
-        mse = mean_squared_error(y_test, y_pred)
-        # Salva l'errore in una lista per riferimento futuro
-        print(f'Anno {year}: Mean Squared Error = {mse}')
 
 # Combina tutte le predizioni in un unico DataFrame
 if predictions:
     all_predictions = pd.concat(predictions)
+    # Verifica la struttura del DataFrame
+    print("DataFrame combinato:")
+    print(all_predictions.head())
+    print(all_predictions.columns)
+    
     # Salva le predizioni in un nuovo CSV
-    all_predictions.to_csv('predicted_results2.csv', index=False)
+    try:
+        all_predictions.to_csv('predicted_results3.csv', index=False)
+        print("Le predizioni sono state salvate in 'predicted_results3.csv'.")
+    except Exception as e:
+        print(f"Errore durante il salvataggio del file: {e}")
 else:
     print('Nessuna predizione disponibile.')

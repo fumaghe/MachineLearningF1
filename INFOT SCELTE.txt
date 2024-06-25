@@ -1,0 +1,25 @@
+Media delle importanze delle caratteristiche nel periodo 2018-2023:
+grid: 0.6069209809838686
+previous_position: 0.22172876551614126
+previous_points: 0.17135025349999009
+
+------------------------ _ ------------------------ _ -----------------------------------
+
+Caratteristiche Decise da Utilizzare
+Grid:
+
+Posizione di partenza nella griglia.
+Previous Position:
+
+Posizione finale della gara precedente.
+Risultati delle ultime 10 gare:
+
+Media delle posizioni finali nelle ultime 10 gare.
+Prestazioni del pilota nella determinata pista:
+
+Media delle posizioni finali del pilota su quella pista negli anni precedenti.
+Numero di vittorie su quella pista.
+Numero di podi su quella pista.
+Posizioni guadagnate o perse in base alla griglia:
+
+Media delle posizioni guadagnate o perse rispetto alla posizione di partenza nelle gare precedenti.
