@@ -16,16 +16,23 @@ data = data.sort_values(by=['raceId', 'predicted_positionOrder'])
 def calculate_standings(data):
     data['predicted_final_position'] = data.groupby(['raceId', 'year'])['predicted_positionOrder'].rank(method='first')
     data['predicted_points'] = data['predicted_final_position'].apply(calculate_points)
+    data['real_points'] = data['positionOrder'].apply(calculate_points)
     
-    # Calcola la classifica piloti predetta
-    driver_standings = data.groupby(['year', 'driverId', 'driverForename', 'driverSurname', 'constructorId'])['predicted_points'].sum().reset_index()
-    driver_standings = driver_standings.sort_values(by=['year', 'predicted_points'], ascending=[True, False])
+    # Calcola la classifica piloti predetta e reale
+    driver_standings_predicted = data.groupby(['year', 'driverId', 'driverForename', 'driverSurname', 'constructorName'])['predicted_points'].sum().reset_index()
+    driver_standings_predicted = driver_standings_predicted.sort_values(by=['year', 'predicted_points'], ascending=[True, False])
     
-    # Calcola la classifica costruttori predetta
-    constructor_standings = data.groupby(['year', 'constructorId'])['predicted_points'].sum().reset_index()
-    constructor_standings = constructor_standings.sort_values(by=['year', 'predicted_points'], ascending=[True, False])
+    driver_standings_real = data.groupby(['year', 'driverId', 'driverForename', 'driverSurname', 'constructorName'])['real_points'].sum().reset_index()
+    driver_standings_real = driver_standings_real.sort_values(by=['year', 'real_points'], ascending=[True, False])
     
-    return driver_standings, constructor_standings
+    # Calcola la classifica costruttori predetta e reale
+    constructor_standings_predicted = data.groupby(['year', 'constructorId', 'constructorName'])['predicted_points'].sum().reset_index()
+    constructor_standings_predicted = constructor_standings_predicted.sort_values(by=['year', 'predicted_points'], ascending=[True, False])
+    
+    constructor_standings_real = data.groupby(['year', 'constructorId', 'constructorName'])['real_points'].sum().reset_index()
+    constructor_standings_real = constructor_standings_real.sort_values(by=['year', 'real_points'], ascending=[True, False])
+    
+    return driver_standings_predicted, driver_standings_real, constructor_standings_predicted, constructor_standings_real
 
 # Funzione per calcolare i punti in base alla posizione predetta
 def calculate_points(position):
@@ -73,25 +80,29 @@ def generate_position_diff_html(data):
 
 # Funzione per generare il report HTML completo
 def generate_report_html(data):
-    driver_standings, constructor_standings = calculate_standings(data)
+    driver_standings_predicted, driver_standings_real, constructor_standings_predicted, constructor_standings_real = calculate_standings(data)
     
     html = "<html><head><title>Analisi delle Predizioni</title></head><body>"
     
-    for year in driver_standings['year'].unique():
-        year_driver_standings = driver_standings[driver_standings['year'] == year]
-        year_constructor_standings = constructor_standings[constructor_standings['year'] == year]
+    for year in driver_standings_predicted['year'].unique():
+        year_driver_standings_predicted = driver_standings_predicted[driver_standings_predicted['year'] == year]
+        year_driver_standings_real = driver_standings_real[driver_standings_real['year'] == year]
+        year_constructor_standings_predicted = constructor_standings_predicted[constructor_standings_predicted['year'] == year]
+        year_constructor_standings_real = constructor_standings_real[constructor_standings_real['year'] == year]
         
-        html += f"<h1>Classifica finale per l'anno {year} (Predetta)</h1>"
+        html += f"<h1>Classifica finale per l'anno {year} (Predetta vs Reale)</h1>"
         html += "<h2>Classifica Piloti</h2>"
-        html += "<table border='1'><tr><th>Posizione</th><th>Pilota</th><th>Scuderia</th><th>Punti Predetti</th></tr>"
-        for position, (index, row) in enumerate(year_driver_standings.iterrows(), start=1):
-            html += f"<tr><td>{position}</td><td>{row['driverForename']} {row['driverSurname']}</td><td>{row['constructorId']}</td><td>{row['predicted_points']}</td></tr>"
+        html += "<table border='1'><tr><th>Posizione</th><th>Pilota</th><th>Scuderia</th><th>Punti Predetti</th><th>Punti Reali</th></tr>"
+        for position, (index, row) in enumerate(year_driver_standings_predicted.iterrows(), start=1):
+            real_points = year_driver_standings_real.loc[year_driver_standings_real['driverId'] == row['driverId'], 'real_points'].values[0]
+            html += f"<tr><td>{position}</td><td>{row['driverForename']} {row['driverSurname']}</td><td>{row['constructorName']}</td><td>{row['predicted_points']}</td><td>{real_points}</td></tr>"
         html += "</table><br>"
         
         html += "<h2>Classifica Costruttori</h2>"
-        html += "<table border='1'><tr><th>Posizione</th><th>Costruttore</th><th>Punti Predetti</th></tr>"
-        for position, (index, row) in enumerate(year_constructor_standings.iterrows(), start=1):
-            html += f"<tr><td>{position}</td><td>{row['constructorId']}</td><td>{row['predicted_points']}</td></tr>"
+        html += "<table border='1'><tr><th>Posizione</th><th>Costruttore</th><th>Punti Predetti</th><th>Punti Reali</th></tr>"
+        for position, (index, row) in enumerate(year_constructor_standings_predicted.iterrows(), start=1):
+            real_points = year_constructor_standings_real.loc[year_constructor_standings_real['constructorId'] == row['constructorId'], 'real_points'].values[0]
+            html += f"<tr><td>{position}</td><td>{row['constructorName']}</td><td>{row['predicted_points']}</td><td>{real_points}</td></tr>"
         html += "</table><br>"
 
         html += generate_position_diff_html(data[data['year'] == year])
