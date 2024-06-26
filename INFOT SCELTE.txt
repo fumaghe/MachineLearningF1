@@ -32,3 +32,26 @@ track_avg_position: 0.2124004488751008
 track_wins: 0.020982825583738287
 track_podiums: 0.04617582172561155
 avg_gained_lost: 0.0
+
+
+
+NON DEVONO AVERE:
+Le prossime gare sono:
+GP d'Austria
+GP di Gran Bretagna
+GP d'Ungheria
+GP del Belgio
+GP d'Olanda
+GP d'Italia
+GP di Azerbaigian
+GP di Singapore
+GP degli USA
+GP del Messico
+GP del Brasile
+GP di Las Vegas
+GP del Qatar
+GP di Abu Dhabi
+Riesci a fare in modo di aggiungermi pure queste gare andando a prendere le info delle gare dagli anni precedenti 
+(utilizzando come date semplicemente 2024), per i piloti recupera le informazioni dalle gare precedenti, 
+non considerare il position order, il grid, racestatus, laps, resultpoints e resulttime, per questi metti 0, 
+per gli altri compilali recuperando i valori
