@@ -6,7 +6,8 @@ import os
 files = [
     'predicted_results3.csv',
     'predicted_results4.csv',
-    'predicted_results5.csv'
+    'predicted_results5.csv',
+    'predicted_results6.csv'
 ]
 
 # Leggi i file
