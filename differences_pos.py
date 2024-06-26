@@ -15,12 +15,12 @@ def generate_html(data):
     grouped = data.groupby(['raceId', 'raceName', 'year'])
     for name, group in grouped:
         html += f"<h2>{name[1]} ({name[2]})</h2>"
-        html += "<table border='1'><tr><th>Pilota</th><th>Posizione predetta</th><th>Posizione reale</th></tr>"
+        html += "<table border='1'><tr><th>Pilota</th><th>Posizione predetta</th><th>Posizione reale</th><th>Race Status</th></tr>"
         top_10 = group.head(10)
         # Assegna i valori di classifica predetta da 1 a 10
         top_10['predicted_final_position'] = range(1, len(top_10) + 1)
         for index, row in top_10.iterrows():
-            html += f"<tr><td>{row['driverForename']} {row['driverSurname']}</td><td>{row['predicted_final_position']}</td><td>{row['positionOrder']}</td></tr>"
+            html += f"<tr><td>{row['driverForename']} {row['driverSurname']}</td><td>{row['predicted_final_position']}</td><td>{row['positionOrder']}</td><td>{row['raceStatus']}</td></tr>"
         html += "</table><br>"
     return html
 
