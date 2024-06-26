@@ -20,7 +20,7 @@ all_data = pd.concat(data_frames)
 unique_races = all_data[['raceId', 'raceName', 'year']].drop_duplicates()
 
 # Seleziona il 20% delle gare casualmente
-sample_size = int(0.2 * len(unique_races))
+sample_size = int(1 * len(unique_races))
 sample_races = unique_races.sample(n=sample_size, random_state=42)
 
 # Filtra i dati per le gare selezionate
@@ -32,7 +32,7 @@ def evaluate_predictions(df):
         df = df.copy()  # Evita l'errore SettingWithCopyWarning
         df['position_diff'] = abs(df['positionOrder'] - df['predicted_positionOrder'])
         # Escludi outliers dove la differenza è >= 10
-        df = df[df['position_diff'] < 10]
+        df = df[df['position_diff'] <= 10]
         mean_diff = df.groupby(['raceId', 'raceName', 'year'])['position_diff'].mean().reset_index()
         return mean_diff
     else:
